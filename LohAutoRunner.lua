@@ -1,26 +1,34 @@
 local ns = select(2, ...);
-
+local F = ns.Funcs
 ns.LohAutoRunner = {};
 ns.LohAutoRunner.__index = ns.LohAutoRunner;
 
--- GLOBALS: OverrideActionBar
+local frames = {}
+-- nextButton must singleton 
+local function GetActionButtonFrame(name, parent)
+    if frames[name] then return frames[name] end
+    local button = CreateFrame("Button", name, parent, "SecureActionButtonTemplate, UIPanelButtonTemplate")
+    frames[name] = button
+    return button
+end
 
 function ns.LohAutoRunner:New(steps)
     local self = {};
     setmetatable(self, ns.LohAutoRunner);
-
+    
     self.unit = "pet";
-    self.spells = { 
+    self.spells = {
         [271600] = true,
         [271601] = true,
         [271602] = true
     };
     self.nextStepIndex = 0;
     self.steps = steps;
-
-    self.nextButton = CreateFrame("Button", "AutoLohNextButton", OverrideActionBar, "SecureActionButtonTemplate, UIPanelButtonTemplate") do
-		self.nextButton:SetSize(80, 22);
-		self.nextButton:SetPoint("CENTER");
+    local parent, poss = F:GetOverrideActionBarAndPos()
+    self.nextButton = GetActionButtonFrame("AutoLohNextButton", _G[parent])
+    do
+        self.nextButton:SetSize(80, 22);
+        F.RePoint(self.nextButton, parent, poss)
         self.nextButton:SetText("Next");
         
         self.nextButton:RegisterEvent("UNIT_AURA");
@@ -42,7 +50,7 @@ function ns.LohAutoRunner:New(steps)
         SetOverrideBindingClick(self.nextButton, true, "A", self.nextButton:GetName());
         self:PrepareNextStep();
     end
-
+    
     return self;
 end
 
@@ -50,22 +58,24 @@ function ns.LohAutoRunner:Dispose()
     self.nextButton:UnregisterEvent("UNIT_AURA");
     self.nextButton:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
     ClearOverrideBindings(self.nextButton);
+
 end
 
 function ns.LohAutoRunner:PrepareNextStep()
     if self:IsNextEnabled() == false then
         self.nextButton:Disable();
     end
-
+    
     self.nextStepIndex = self.nextStepIndex + 1;
-
+    
     if self:IsEnd() then
         self:Dispose();
         return;
     end
+    -- ELVUI fix because OverrideActionBarButton1 is unregisterEvents
+    self.nextButton:SetAttribute("type1", "pet");
+    self.nextButton:SetAttribute("action", self:NextStep());
 
-    self.nextButton:SetAttribute("type1", "macro");
-    self.nextButton:SetAttribute("macrotext", "/click OverrideActionBarButton"..self:NextStep());
 end
 
 function ns.LohAutoRunner:NextStep()
@@ -82,11 +92,11 @@ function ns.LohAutoRunner:IsEnd()
 end
 
 function ns.LohAutoRunner:IsLohProcessing()
-    for i = 1,40 do
-		local debuffName = UnitDebuff(self.unit, i);
-        if debuffName == "Processing" then
-			return true;
-		end
+    for i = 1, 40 do
+        local debuffID = select(10, UnitDebuff(self.unit, i));
+        if debuffID == 271809 then
+            return true;
+        end
     end
     
     return false;
