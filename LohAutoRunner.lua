@@ -8,6 +8,7 @@ local frames = {}
 local function GetActionButtonFrame(name, parent)
     if frames[name] then return frames[name] end
     local button = CreateFrame("Button", name, parent, "SecureActionButtonTemplate, UIPanelButtonTemplate")
+    F:RestyleButton(button)
     frames[name] = button
     return button
 end
@@ -37,7 +38,7 @@ function ns.LohAutoRunner:New(steps)
             if event == "UNIT_SPELLCAST_SUCCEEDED" and arg1 == self.unit and self.spells[arg3] then
                 self:PrepareNextStep();
             elseif event == "UNIT_AURA" and arg1 == self.unit then
-                if self:IsNextEnabled() then
+                if	 self:IsNextEnabled() then
                     self.nextButton:Enable();
                 else
                     self.nextButton:Disable();
@@ -75,7 +76,6 @@ function ns.LohAutoRunner:PrepareNextStep()
     -- ELVUI fix because OverrideActionBarButton1 is unregisterEvents
     self.nextButton:SetAttribute("type1", "pet");
     self.nextButton:SetAttribute("action", self:NextStep());
-
 end
 
 function ns.LohAutoRunner:NextStep()
@@ -84,20 +84,27 @@ end
 
 function ns.LohAutoRunner:IsNextEnabled()
     -- Loh can only move if the player does not have the Processing debuff (https://www.wowhead.com/spell=271809/processing)
-    return self:IsLohProcessing() == false and self.nextStepIndex <= table.getn(self.steps);
+    return self:IsStart() and self:IsLohProcessing() == false and self.nextStepIndex <= table.getn(self.steps);
 end
 
 function ns.LohAutoRunner:IsEnd()
     return self.nextStepIndex > table.getn(self.steps);
 end
 
-function ns.LohAutoRunner:IsLohProcessing()
-    for i = 1, 40 do
-        local debuffID = select(10, UnitDebuff(self.unit, i));
-        if debuffID == 271809 then
+local function findAura(unit,debuff)
+	for i = 1, 40 do
+        local debuffID = select(10, UnitDebuff(unit, i));
+        if debuffID and debuffID == debuff then
             return true;
         end
     end
-    
-    return false;
+	return false
+end
+
+function ns.LohAutoRunner:IsStart()
+	return findAura(self.unit,276705)
+end
+
+function ns.LohAutoRunner:IsLohProcessing()
+	return findAura(self.unit,271809)
 end
