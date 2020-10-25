@@ -29,7 +29,7 @@ function F:GetOverrideActionBarAndPos()
             return unpack(v)
         end
     end
-    return "OverrideActionBar",{"BOTTOM", _G["OverrideActionBar"], "TOP", 0, 0},
+    return "OverrideActionBar",{"BOTTOM", _G["OverrideActionBar"], "TOP", 0, 0}
 end
 
 function F:RestyleButton(button)
